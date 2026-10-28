@@ -2,20 +2,20 @@ import streamlit as st
 import networkx as nx
 import pandas as pd
 import plotly.graph_objects as go
-
+ 
 st.set_page_config(page_title="Laboratorio Johal - Sink Tree", layout="wide")
-
+ 
 st.title("Laboratorio de Redes: Optimalidad y Sink Tree")
 st.write(
     "Simulador educativo de rutas entre el router de origen H y el destino B. "
     "Puedes cambiar retardos, capacidades y disponibilidad de los enlaces."
 )
-
+ 
 # Datos iniciales de los enlaces. Los retardos y capacidades son los valores
 # de ejemplo que aparecen en la guía del laboratorio.
 ENLACES_INICIALES = [
     {"Origen": "H", "Destino": "D", "Retardo_ms": 8, "Banda_Mbps": 100, "Disponible": True},
-    {"Origen": "D", "Destino": "A", "Retardo_m          s": 9, "Banda_Mbps": 100, "Disponible": True},
+    {"Origen": "D", "Destino": "A", "Retardo_ms": 9, "Banda_Mbps": 100, "Disponible": True},
     {"Origen": "A", "Destino": "B", "Retardo_ms": 7, "Banda_Mbps": 100, "Disponible": True},
     {"Origen": "H", "Destino": "E", "Retardo_ms": 5, "Banda_Mbps": 50, "Disponible": True},
     {"Origen": "E", "Destino": "J", "Retardo_ms": 10, "Banda_Mbps": 50, "Disponible": True},
@@ -25,21 +25,21 @@ ENLACES_INICIALES = [
     {"Origen": "O", "Destino": "N", "Retardo_ms": 9, "Banda_Mbps": 50, "Disponible": True},
     {"Origen": "N", "Destino": "J", "Retardo_ms": 9, "Banda_Mbps": 50, "Disponible": True},
 ]
-
+ 
 if "enlaces" not in st.session_state:
     st.session_state.enlaces = pd.DataFrame(ENLACES_INICIALES)
-
+ 
 if st.sidebar.button("Restablecer datos iniciales"):
     st.session_state.enlaces = pd.DataFrame(ENLACES_INICIALES)
     # Borra también las ediciones guardadas por el editor de la tabla.
     st.session_state.pop("editor_enlaces", None)
-
+ 
 st.sidebar.header("Configuración")
 objetivo = st.sidebar.selectbox(
     "Función objetivo",
     ["Mínimo de saltos (Johal)", "Mínimo retardo", "Costo multicriterio"]
 )
-
+ 
 st.sidebar.write("Pesos del costo multicriterio")
 alpha = st.sidebar.number_input("α: saltos", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
 beta = st.sidebar.number_input("β: retardo", min_value=0.0, max_value=1.0, value=0.35, step=0.05)
@@ -51,7 +51,7 @@ if suma_pesos == 0:
 else:
     alpha, beta, gamma = alpha / suma_pesos, beta / suma_pesos, gamma / suma_pesos
     st.sidebar.caption(f"Pesos normalizados: α={alpha:.3f}, β={beta:.3f}, γ={gamma:.3f}")
-
+ 
 st.header("1. Tabla de enlaces")
 st.write("Edita el retardo, la banda y la disponibilidad directamente en la tabla.")
 editado = st.data_editor(
@@ -68,7 +68,7 @@ editado = st.data_editor(
     key="editor_enlaces",
 )
 st.session_state.enlaces = editado.copy()
-
+ 
 # Grafo no dirigido: se incluyen solo los enlaces disponibles para calcular rutas.
 G = nx.Graph()
 for _, fila in editado.iterrows():
@@ -79,11 +79,11 @@ for _, fila in editado.iterrows():
             retardo=float(fila["Retardo_ms"]),
             banda=float(fila["Banda_Mbps"]),
         )
-
+ 
 # Añadir nodos aunque todos sus enlaces estén caídos ayuda a informar desconexiones.
 for nodo in ["H", "D", "A", "B", "E", "J", "C", "O", "N"]:
     G.add_node(nodo)
-
+ 
 if objetivo == "Mínimo de saltos (Johal)":
     peso = lambda u, v, datos: 1
 elif objetivo == "Mínimo retardo":
@@ -100,7 +100,7 @@ else:
             / datos["banda"]
         )
     )
-
+ 
 st.header("2. Grafo y ruta óptima")
 pos = {
     "H": (0, 1), "D": (1, 2), "A": (2, 2), "B": (3, 1),
@@ -130,7 +130,7 @@ for nodo, (x, y) in pos.items():
 fig.update_layout(height=450, margin=dict(l=20, r=20, t=20, b=20),
                   xaxis=dict(visible=False), yaxis=dict(visible=False))
 st.plotly_chart(fig, width="stretch")
-
+ 
 ruta = None
 try:
     if nx.has_path(G, "H", "B"):
@@ -154,7 +154,7 @@ try:
         st.error("No existe una ruta disponible entre H y B con la configuración actual.")
 except (nx.NetworkXNoPath, nx.NodeNotFound):
     st.error("No existe una ruta disponible entre H y B con la configuración actual.")
-
+ 
 st.header("3. Sink Tree: siguientes saltos hacia B")
 if ruta:
     arbol = nx.Graph()
@@ -167,7 +167,7 @@ if ruta:
     st.caption("Esta tabla muestra los siguientes saltos de la ruta óptima actual, no todas las rutas de respaldo.")
 else:
     st.info("El Sink Tree no puede calcularse porque no hay una ruta disponible.")
-
+ 
 st.header("4. Comparación de las tres rutas de la guía")
 rutas_referencia = {
     "PSRC": ["H", "D", "A", "B"],
@@ -202,7 +202,7 @@ for nombre, nodos in rutas_referencia.items():
         })
 tabla_rutas = pd.DataFrame(resultados)
 st.dataframe(tabla_rutas, hide_index=True, width="stretch")
-
+ 
 st.header("5. Exportar resultados")
 csv = tabla_rutas.to_csv(index=False).encode("utf-8-sig")
 st.download_button(
@@ -215,3 +215,4 @@ st.caption(
     "Los retardos y capacidades son datos didácticos del laboratorio. "
     "El costo multicriterio es una extensión propuesta para esta práctica."
 )
+ 
